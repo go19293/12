@@ -937,7 +937,7 @@ class MacroApp(tk.Tk):
     
     def _active_program_summary(self = None):
         targets = self._normalize_active_program_targets(getattr(self, 'active_program_targets', []))
-        if not bool(getattr(self, 'active_program_all', True)) or targets:
+        if bool(getattr(self, 'active_program_all', True)) or not targets:
             return '동작시킬 프로그램: 전체 ▼'
         first = targets[0]
         if len(targets) == 1:
@@ -957,7 +957,7 @@ class MacroApp(tk.Tk):
     
     def _is_active_program_allowed(self = None):
         targets = self._normalize_active_program_targets(getattr(self, 'active_program_targets', []))
-        if not bool(getattr(self, 'active_program_all', True)) or targets:
+        if bool(getattr(self, 'active_program_all', True)) or not targets:
             return True
         current_process = get_foreground_process_name()
         if not current_process:
@@ -3102,7 +3102,7 @@ class MacroApp(tk.Tk):
     
     def _load_last_settings_silent(self):
         path = getattr(self, '_last_settings_path', '')
-        if not path or os.path.exists(path):
+        if not path or not os.path.exists(path):
             return None
         
         try:
@@ -4757,7 +4757,7 @@ class TriggerDialog(tk.Toplevel):
             action['trigger_button'] = ''
         else:
             (trigger_button_type, trigger_button) = self._selected_trigger_mouse_storage()
-            if not trigger_button_type or trigger_button:
+            if not trigger_button_type or not trigger_button:
                 messagebox.showinfo('안내', '그외 버튼추가를 눌러 시작 마우스 버튼을 먼저 등록하세요.')
                 return None
             trigger_mouse_hotkey = mouse_button_hotkey(trigger_button, trigger_button_type)
@@ -4967,7 +4967,7 @@ class TriggerStepDialog(tk.Toplevel):
             step['target_button'] = ''
         else:
             (target_button_type, target_button) = self._selected_target_mouse_storage()
-            if not target_button_type or target_button:
+            if not target_button_type or not target_button:
                 messagebox.showinfo('안내', '그외 버튼추가를 눌러 실행 마우스 버튼을 먼저 등록하세요.')
                 return None
             target_mouse_hotkey = mouse_button_hotkey(target_button, target_button_type)
@@ -5134,7 +5134,7 @@ class ActionDialog(tk.Toplevel):
                 'key': ks }
         else:
             (button_type, button) = self._selected_mouse_storage()
-            if not button_type or button:
+            if not button_type or not button:
                 messagebox.showinfo('안내', '그외 버튼추가를 눌러 마우스 버튼을 먼저 등록하세요.')
                 return None
             target_mouse_hotkey = mouse_button_hotkey(button, button_type)
