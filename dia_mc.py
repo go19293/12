@@ -435,7 +435,7 @@ class MacroApp(tk.Tk):
     
     def __init__(self = None):
         super().__init__()
-        self.title('매크로 (게임패드 지원판 v5)')
+        self.title('매크로 (게임패드 지원판 v6)')
         self._set_window_icon()
         self.resizable(True, True)
         self.start_keys = [
@@ -1958,8 +1958,8 @@ class MacroApp(tk.Tk):
             if not self._hotkey_matches(key, input_type, input_value):
                 continue
             mode = item.get('mode', 'hold')
-            
-            return self.pause_key_items, {
+
+            return {
                 'key': key,
                 'mode': 'toggle' if mode == 'toggle' else 'hold' }
 
@@ -3327,7 +3327,7 @@ class MacroApp(tk.Tk):
                 self._suppressed_trigger_inputs.clear()
                 self._trigger_epoch += 1
         for _ in range(30):
-            alive = any((t.is_alive() for t in self._worker_threads()))
+            alive = any((t.is_alive() for t in self._worker_threads))
             if not alive:
                 break
             else:
