@@ -440,7 +440,7 @@ class MacroApp(tk.Tk):
     
     def __init__(self = None):
         super().__init__()
-        self.title('매크로 (게임패드 지원판 v2)')
+        self.title('매크로 (게임패드 지원판 v3)')
         self._set_window_icon()
         self.resizable(True, True)
         self.start_keys = [
@@ -1265,6 +1265,12 @@ class MacroApp(tk.Tk):
         rects = []
         seen_rects = set()
         for target in targets:
+            if target == 'window':
+                item = self._window_monitor_rect()
+            else:
+                item = monitor_by_target.get(target)
+                if item is None:
+                    continue
             rect_key = (item['left'], item['top'], item['right'], item['bottom'])
             if rect_key in seen_rects:
                 continue
@@ -2829,6 +2835,11 @@ class MacroApp(tk.Tk):
             self.tree.delete(i)
         for a in self.actions:
             kind = '키' if a['type'] == 'key' else '마우스'
+            if a['type'] == 'key':
+                target = a.get('key', '')
+            else:
+                (button_type, button) = self._action_mouse_storage(a)
+                target = mouse_button_display_text(button_type, button)
             mode = '클릭' if a.get('mode') == 'click' else '누르기'
             interval = '' if a.get('mode') == 'hold' else format_interval_value(a.get('interval', 0.0001))
             self.tree.insert('', 'end', iid = a['id'], values = (kind, target, mode, interval))
