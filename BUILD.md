@@ -22,9 +22,9 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install pyinstaller
 ```
-`requirements.txt` 에는 다음이 포함됩니다.
-- `pynput` — 키보드/마우스 입력(기존 기능)
-- `pygame` — **게임패드 입력(신규)**
+`requirements.txt` 에는 `pynput`(키보드/마우스 입력)만 포함됩니다.
+**게임패드 입력은 Windows 내장 XInput(ctypes)** 으로 동작하므로 추가 라이브러리가
+필요 없습니다.
 
 ## 3. 그냥 실행해서 테스트 (빌드 없이)
 ```bat
@@ -44,12 +44,12 @@ pyinstaller dia_mc.spec
 
 배포할 때는 `dist\DIA_MC` 폴더 전체를 압축해서 전달하면 됩니다.
 
-## 5. 게임패드 지원 안내
-- **Xbox / Xbox 호환 패드** → Windows 표준 XInput 으로 인식되어 바로 동작합니다.
-- **PlayStation(DualShock/DualSense) 등 기타 패드** → pygame 의 joystick 으로
-  인식되어 동작합니다(필요 시 Steam 입력/드라이버로 XInput 변환 권장).
-- **레노버 리전 고2(Lenovo Legion Go 2)** → 내장 컨트롤러가 Windows 에서 표준
-  XInput 게임패드로 보고되므로 별도 설정 없이 지원됩니다.
+## 5. 게임패드 지원 안내 (Windows 내장 XInput 사용, 추가 설치 불필요)
+- **Xbox / Xbox 호환 패드** → XInput 으로 바로 동작합니다.
+- **레노버 리전 고2(Lenovo Legion Go 2)** → 내장 컨트롤러가 표준 XInput 으로
+  보고되므로 별도 설정 없이 지원됩니다.
+- **PlayStation(DualShock/DualSense) 등** → Steam 입력 또는 DS4Windows 로
+  XInput 모드일 때 동작합니다.
 
 게임패드 버튼은 키보드/마우스 핫키와 **완전히 동일하게** 다음 용도로 지정할 수
 있습니다.
@@ -61,5 +61,5 @@ pyinstaller dia_mc.spec
 지원 입력: A/B/X/Y, LB/RB, LT/RT, Back/Start, 스틱 누름(L/R), 방향패드(D-Pad),
 좌/우 스틱 방향. (`gamepad_input.py` 에서 매핑/임계값 조정 가능)
 
-> pygame 이 설치되어 있지 않으면 게임패드 기능만 비활성화되고 나머지(키보드/마우스)
-> 는 정상 동작합니다.
+> XInput 컨트롤러가 없으면 게임패드 기능만 비활성화되고 나머지(키보드/마우스)는
+> 정상 동작합니다.

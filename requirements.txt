@@ -1,2 +1,1 @@
 pynput>=1.7
-pygame>=2.5

@@ -20,7 +20,7 @@ if errorlevel 1 (
 python --version
 
 echo.
-echo [2/4] 필요한 패키지 설치 (pynput / pygame / pyinstaller)...
+echo [2/4] 필요한 패키지 설치 (pynput / pyinstaller)...
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install pyinstaller

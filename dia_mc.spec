@@ -15,7 +15,6 @@ a = Analysis(
     hiddenimports=[
         'pynput.keyboard._win32',
         'pynput.mouse._win32',
-        'pygame',
     ],
     hookspath=[],
     hooksconfig={},
