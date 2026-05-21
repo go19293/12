@@ -67,23 +67,19 @@ def str_to_key(s = None):
         return keyboard.KeyCode.from_char(s)
     if s.startswith('Key.'):
         name = s.split('.', 1)[1]
-        
         try:
             return getattr(keyboard.Key, name)
         except Exception:
             return None
-
-        if s.startswith('VK.'):
-            body = s[3:]
-            vk_str = body.split(':', 1)[0]
-            
-            try:
-                vk = int(vk_str)
-                return keyboard.KeyCode.from_vk(vk)
-            except Exception:
-                return None
-
+    if s.startswith('VK.'):
+        body = s[3:]
+        vk_str = body.split(':', 1)[0]
+        try:
+            vk = int(vk_str)
+            return keyboard.KeyCode.from_vk(vk)
+        except Exception:
             return None
+    return None
 
 MOUSE_BUTTON_LABELS = {
     'left': '왼쪽버튼',
@@ -399,8 +395,7 @@ def enumerate_running_window_programs():
         enum_proc = enum_windows_proc(callback)
         user32.EnumWindows(enum_proc, None)
     except Exception:
-        return 
-
+        return []
     return sorted(programs_by_name.values(), key = active_program_sort_key)
 
 
@@ -440,7 +435,7 @@ class MacroApp(tk.Tk):
     
     def __init__(self = None):
         super().__init__()
-        self.title('매크로 (게임패드 지원판 v3)')
+        self.title('매크로 (게임패드 지원판 v4)')
         self._set_window_icon()
         self.resizable(True, True)
         self.start_keys = [
@@ -1798,7 +1793,12 @@ class MacroApp(tk.Tk):
             count = int(self._suppressed_trigger_inputs.get(key, 0))
             if count <= 0:
                 return False
+            if count == 1:
+                self._suppressed_trigger_inputs.pop(key, None)
+            else:
+                self._suppressed_trigger_inputs[key] = count - 1
             return True
+
     def _begin_input_block(self):
         with self._input_block_lock:
             was_blocked = self._input_block_count > 0
@@ -1837,7 +1837,7 @@ class MacroApp(tk.Tk):
     
     def _is_input_blocked(self = None):
         with self._input_block_lock:
-            return 
+            return self._input_block_count > 0
     def _first_hotkey(self = None, values = None, default = None):
         for value in values:
             value = str(value or '').strip()
@@ -2134,11 +2134,10 @@ class MacroApp(tk.Tk):
     def _is_trigger_input_pressed(self = None, trigger_type = None, trigger_value = None):
         with self._trigger_lock:
             if trigger_type == 'key':
-                return 
+                return trigger_value in self._pressed_trigger_keys
             if trigger_type == 'mouse':
-                return 
+                return trigger_value in self._pressed_trigger_mouse_inputs
             return False
-        return False
 
     
     def _same_trigger_and_step(self = None, action = None, step = None):
@@ -2994,7 +2993,25 @@ class MacroApp(tk.Tk):
     
     def _settings_payload(self = None):
         self._sync_legacy_hotkey_values()
-        return { }['start_key']['stop_key']['start_keys']['stop_keys']['pause_keys']['pause_key_items']['loot_key']['quick_right_key']['start_stop_same_key']['center_status_enabled']['center_status_targets']['center_status_shape']['center_status_show_text']['center_status_size_percent']['active_program_all']['active_program_targets']['actions']
+        return {
+            'start_key': self.start_key_str,
+            'stop_key': self.stop_key_str,
+            'start_keys': list(self.start_keys),
+            'stop_keys': list(self.stop_keys),
+            'pause_keys': self._pause_key_values(),
+            'pause_key_items': self._normalize_pause_keys(),
+            'loot_key': self.loot_hold_key_str,
+            'quick_right_key': self.quick_right_hold_key_str,
+            'start_stop_same_key': bool(self.start_stop_same_key),
+            'center_status_enabled': bool(self.center_status_enabled),
+            'center_status_targets': self._normalize_center_status_targets(),
+            'center_status_shape': self.center_status_shape if self.center_status_shape in frozenset({'bar', 'circle'}) else 'circle',
+            'center_status_show_text': bool(self.center_status_show_text),
+            'center_status_size_percent': self._center_status_size_percent_value(),
+            'active_program_all': bool(self.active_program_all),
+            'active_program_targets': self._normalize_active_program_targets(self.active_program_targets),
+            'actions': self.actions,
+            'trigger_actions': self.trigger_actions }
 
     
     def _apply_loaded_settings_data(self = None, data = None, show_warnings = None):
@@ -3328,25 +3345,21 @@ class MacroApp(tk.Tk):
             kobj = str_to_key(ks)
             if kobj is None:
                 return None
-            
             try:
                 self.kb_controller.press(kobj)
                 self._held_keys.append(kobj)
-                return None
             except Exception:
                 return None
-
+        else:
             (button_type, button) = self._action_mouse_storage(a)
             bobj = mouse_button_obj_from_storage(button_type, button)
             if bobj is None:
                 return None
-        
-        try:
-            self.mouse_controller.press(bobj)
-            self._held_mouse.append(bobj)
-            return None
-        except Exception:
-            return None
+            try:
+                self.mouse_controller.press(bobj)
+                self._held_mouse.append(bobj)
+            except Exception:
+                return None
 
 
     
@@ -3552,8 +3565,9 @@ class MacroApp(tk.Tk):
             with self._trigger_lock:
                 if run_mode == 'skip_while_running' and trigger_id in self._active_trigger_ids:
                     continue
-                if run_mode == 'skip_while_running' or trigger_id:
-                    self._active_trigger_ids.add(trigger_id)
+                if run_mode == 'skip_while_running':
+                    if trigger_id:
+                        self._active_trigger_ids.add(trigger_id)
                 elif run_mode == 'always' and always_mode == 'restart' and trigger_id:
                     next_version = int(self._trigger_run_versions.get(trigger_id, 0)) + 1
                     self._trigger_run_versions[trigger_id] = next_version
@@ -3571,8 +3585,9 @@ class MacroApp(tk.Tk):
             if epoch != self._trigger_epoch:
                 return False
             if trigger_id and run_token is not None:
-                return 
+                return self._trigger_run_versions.get(trigger_id) == run_token
             return True
+
     def _trigger_worker(self, a = None, epoch = None, trigger_id = None, run_token = None, allow_first_cycle = None):
         steps = self._trigger_steps(a)
         if not steps:
