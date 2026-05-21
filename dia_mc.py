@@ -435,7 +435,7 @@ class MacroApp(tk.Tk):
     
     def __init__(self = None):
         super().__init__()
-        self.title('매크로 (게임패드 지원판 v4)')
+        self.title('매크로 (게임패드 지원판 v5)')
         self._set_window_icon()
         self.resizable(True, True)
         self.start_keys = [
@@ -828,7 +828,7 @@ class MacroApp(tk.Tk):
             return 'paused'
         if self._is_active_program_waiting():
             return 'target_blocked'
-        if self.running and self.triggers_enabled and self.quick_click_active or self.loot_hold_active:
+        if self.running or self.triggers_enabled or self.quick_click_active or self.loot_hold_active:
             return 'running'
         return 'stopped'
 
@@ -1856,13 +1856,13 @@ class MacroApp(tk.Tk):
                 single_value = data.get(single_key)
                 raw_values = [
                     single_value] if isinstance(single_value, str) and single_value.strip() else []
-            else:
-                raw_values = []
+        else:
+            raw_values = []
         clean = []
         seen = set()
         for value in raw_values:
             value = str(value or '').strip()
-            if value or value in seen:
+            if not value or value in seen:
                 continue
             clean.append(value)
             seen.add(value)
@@ -2160,7 +2160,7 @@ class MacroApp(tk.Tk):
                 self.status_var.set('일시정지중 (홀드 일시정지키를 떼면 재개됩니다)')
                 return None
         if self.start_stop_same_key:
-            if self.running and self.triggers_enabled or self.loot_hold_active:
+            if self.running or self.triggers_enabled or self.loot_hold_active:
                 self._stop_macro()
                 return None
             if not self._is_active_program_allowed():
@@ -2235,7 +2235,7 @@ class MacroApp(tk.Tk):
             if self._find_start_hotkey('key', ks):
                 self._handle_start_hotkey_press()
                 return None
-            if self.start_stop_same_key and self._find_stop_hotkey('key', ks):
+            if not self.start_stop_same_key and self._find_stop_hotkey('key', ks):
                 self._stop_macro()
                 return None
             pause_item = self._find_pause_item('key', ks)
@@ -2313,7 +2313,7 @@ class MacroApp(tk.Tk):
             if self._find_start_hotkey('mouse', mouse_input):
                 self._handle_start_hotkey_press()
                 return None
-            if self.start_stop_same_key and self._find_stop_hotkey('mouse', mouse_input):
+            if not self.start_stop_same_key and self._find_stop_hotkey('mouse', mouse_input):
                 self._stop_macro()
                 return None
             pause_item = self._find_pause_item('mouse', mouse_input)
@@ -2808,7 +2808,7 @@ class MacroApp(tk.Tk):
     def _set_loot_key(self):
         
         def done(ks = None):
-            if ks in self.start_keys and ks in self.stop_keys and ks in self._pause_key_values() or ks == self.quick_right_hold_key_str:
+            if ks in self.start_keys or ks in self.stop_keys or ks in self._pause_key_values() or ks == self.quick_right_hold_key_str:
                 messagebox.showwarning('경고', '빨리줍기키는 시작키/종료키/일시정지키/빠른우클릭키와 다르게 설정하세요.')
                 return None
             self.loot_hold_key_str = ks
@@ -2820,7 +2820,7 @@ class MacroApp(tk.Tk):
     def _set_quick_right_key(self):
         
         def done(ks = None):
-            if ks in self.start_keys and ks in self.stop_keys and ks in self._pause_key_values() or ks == self.loot_hold_key_str:
+            if ks in self.start_keys or ks in self.stop_keys or ks in self._pause_key_values() or ks == self.loot_hold_key_str:
                 messagebox.showwarning('경고', '빠른우클릭키는 시작키/종료키/일시정지키/빨리줍기키와 다르게 설정하세요.')
                 return None
             self.quick_right_hold_key_str = ks
