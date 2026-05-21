@@ -440,7 +440,7 @@ class MacroApp(tk.Tk):
     
     def __init__(self = None):
         super().__init__()
-        self.title('매크로')
+        self.title('매크로 (게임패드 지원판 v2)')
         self._set_window_icon()
         self.resizable(True, True)
         self.start_keys = [
