@@ -1,0 +1,69 @@
+{
+  "start_key": "Key.f1",
+  "stop_key": "Key.f2",
+  "pause_keys": [
+    "`",
+    "Key.tab",
+    "c",
+    "t"
+  ],
+  "loot_key": "Key.f3",
+  "quick_right_key": "Key.f4",
+  "start_stop_same_key": false,
+  "center_status_enabled": false,
+  "actions": [
+    {
+      "id": "65c36851a6fd4eeba4eaaca1514fd26d",
+      "type": "key",
+      "mode": "click",
+      "key": "2",
+      "interval": 0.5
+    },
+    {
+      "id": "ae1705644f9e4bcaa9d03e761343006a",
+      "type": "key",
+      "mode": "click",
+      "key": "3",
+      "interval": 0.5
+    },
+    {
+      "id": "798b9078cf5143cd96ad274c44aeb0b7",
+      "type": "key",
+      "mode": "click",
+      "key": "4",
+      "interval": 0.5
+    }
+  ],
+  "trigger_actions": [
+    {
+      "id": "61939daef6c9417998f1fb918a8235af",
+      "trigger_type": "key",
+      "execution_mode": "once",
+      "hold_stop_mode": "stop_immediately",
+      "repeat_include_trigger": false,
+      "run_mode": "always",
+      "always_mode": "restart",
+      "steps": [
+        {
+          "id": "c40f79820523479781dde86c983f2643",
+          "delay": 0.2,
+          "target_type": "key",
+          "target_key": "r",
+          "target_button_type": "basic",
+          "target_button": ""
+        },
+        {
+          "id": "f1ecd752730d4894a5d5b3033aa90835",
+          "delay": 0.2,
+          "target_type": "mouse",
+          "target_key": "",
+          "target_button_type": "basic",
+          "target_button": "right"
+        }
+      ],
+      "trigger_key": "1",
+      "trigger_button_type": "basic",
+      "trigger_button": ""
+    }
+  ]
+}
