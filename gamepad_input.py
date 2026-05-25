@@ -27,6 +27,14 @@ for _dll in ('XInput1_4.dll', 'XInput1_3.dll', 'xinput9_1_0.dll', 'XInput9_1_0.d
         _xinput = None
 AVAILABLE = _xinput is not None
 
+# XInputGetStateEx(ordinal 100): 표준 XInputGetState 가 가리는 Guide 버튼까지 노출.
+_xinput_get_state_ex = None
+if _xinput is not None:
+    try:
+        _xinput_get_state_ex = _xinput[100]
+    except Exception:
+        _xinput_get_state_ex = None
+
 
 class _XINPUT_GAMEPAD(ctypes.Structure):
     _fields_ = [
@@ -59,11 +67,16 @@ _BUTTON_BITS = [
     (0x0080, 'RStick'),
     (0x0100, 'LB'),
     (0x0200, 'RB'),
+    (0x0400, 'Guide'),   # XInputGetStateEx 로만 올라옴
     (0x1000, 'A'),
     (0x2000, 'B'),
     (0x4000, 'X'),
     (0x8000, 'Y'),
 ]
+# 알려진 비트 합집합 — 나머지(제조사 추가버튼 등)는 일반 이름으로 캡처한다.
+_KNOWN_BUTTON_MASK = 0
+for _b, _n in _BUTTON_BITS:
+    _KNOWN_BUTTON_MASK |= _b
 
 _TRIGGER_THRESHOLD = 60      # 0~255
 _STICK_THRESHOLD = 20000     # -32768~32767
@@ -71,7 +84,7 @@ _STICK_THRESHOLD = 20000     # -32768~32767
 _DISPLAY_NAMES = {
     'A': 'A', 'B': 'B', 'X': 'X', 'Y': 'Y',
     'LB': 'LB', 'RB': 'RB', 'LT': 'LT', 'RT': 'RT',
-    'Back': 'Back', 'Start': 'Start',
+    'Back': 'Back', 'Start': 'Start', 'Guide': 'Guide',
     'LStick': 'L스틱(누름)', 'RStick': 'R스틱(누름)',
     'DPadUp': '방향↑', 'DPadDown': '방향↓', 'DPadLeft': '방향←', 'DPadRight': '방향→',
     'LStickUp': 'L스틱↑', 'LStickDown': 'L스틱↓', 'LStickLeft': 'L스틱←', 'LStickRight': 'L스틱→',
@@ -178,7 +191,7 @@ class GamepadManager:
     def _run(self):
         if not AVAILABLE:
             return
-        XInputGetState = _xinput.XInputGetState
+        XInputGetState = _xinput_get_state_ex or _xinput.XInputGetState
         state = _XINPUT_STATE()
         prev_connected = [False, False, False, False]
         while self._running:
@@ -205,6 +218,13 @@ class GamepadManager:
         buttons = gp.wButtons
         for bit, short in _BUTTON_BITS:
             self._emit(GAMEPAD_PREFIX + short, bool(buttons & bit))
+        # 제조사 추가 버튼(Y1/Y2/Y3/M3 등)이 미사용 비트로 올라오면 일반 이름으로 캡처.
+        # 눌림/뗌 모두 잡아야 고착되지 않으므로 미사용 비트는 매 프레임 확인한다.
+        for shift in range(16):
+            bit = 1 << shift
+            if bit & _KNOWN_BUTTON_MASK:
+                continue
+            self._emit(GAMEPAD_PREFIX + ('Btn0x%04X' % bit), bool(buttons & bit))
         # 트리거
         self._emit(GAMEPAD_PREFIX + 'LT', gp.bLeftTrigger > _TRIGGER_THRESHOLD)
         self._emit(GAMEPAD_PREFIX + 'RT', gp.bRightTrigger > _TRIGGER_THRESHOLD)
