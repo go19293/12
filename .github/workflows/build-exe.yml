@@ -1,0 +1,65 @@
+name: Build Windows EXE
+
+# Python 설치 없이 쓰는 방법:
+#   1) 이 워크플로가 GitHub의 Windows 서버에서 dia_mc.exe 를 빌드한다.
+#   2) 끝나면 Actions 탭의 실행 결과(Artifacts)에서 DIA_MC.zip 다운로드,
+#      또는 Releases 의 'latest' 에서 DIA_MC.zip 다운로드.
+#   3) 압축 풀고 DIA_MC\dia_mc.exe 더블클릭. (내 PC엔 Python 불필요)
+
+on:
+  push:
+    branches:
+      - claude/keen-goodall-xXxNZ
+    paths:
+      - 'dia_mc.py'
+      - 'gamepad_input.py'
+      - 'dia_mc.spec'
+      - 'requirements.txt'
+      - 'dia_logo.*'
+      - '.github/workflows/build-exe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller
+
+      - name: Build exe
+        run: python -m PyInstaller --noconfirm dia_mc.spec
+
+      - name: Bundle example files
+        run: copy *.json dist\DIA_MC\
+        shell: cmd
+
+      - name: Zip result
+        run: Compress-Archive -Path dist\DIA_MC\* -DestinationPath DIA_MC.zip -Force
+        shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DIA_MC
+          path: DIA_MC.zip
+
+      - name: Publish to 'latest' release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          files: DIA_MC.zip
