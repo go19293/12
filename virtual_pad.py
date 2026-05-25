@@ -194,6 +194,9 @@ class VirtualPad:
         time.sleep(hold)
         return self.release(name)
 
+    def is_active(self, name):
+        return name in self._active
+
     def release_all(self):
         with self._lock:
             if self._target is None:

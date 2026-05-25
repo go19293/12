@@ -2383,11 +2383,17 @@ class MacroApp(tk.Tk):
             return None
 
         def gp_press(name = None):
+            vp = self.virtual_pad
+            if vp is not None and vp.is_active(name):
+                return
             handler = getattr(self, '_gamepad_on_press', None)
             if handler is not None:
                 handler(GamepadButton(name))
 
         def gp_release(name = None):
+            vp = self.virtual_pad
+            if vp is not None and vp.is_active(name):
+                return
             handler = getattr(self, '_gamepad_on_release', None)
             if handler is not None:
                 handler(GamepadButton(name))
