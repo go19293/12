@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 echo.
-echo [1/4] Checking Python...
+echo [1/3] Checking Python...
 where python >nul 2>nul
 if errorlevel 1 (
     echo  [ERROR] Python is not installed. Get Python 3.12 from python.org
@@ -11,7 +11,7 @@ if errorlevel 1 (
 )
 python --version
 echo.
-echo [2/4] Installing packages (pynput / pyinstaller)...
+echo [2/3] Installing packages (pynput / pyinstaller)...
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install pyinstaller
@@ -21,7 +21,7 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
-echo [3/4] Building exe...
+echo [3/3] Building single exe...
 python -m PyInstaller --noconfirm dia_mc.spec
 if errorlevel 1 (
     echo  [ERROR] Build failed.
@@ -29,11 +29,7 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
-echo [4/4] Copying logo/example files...
-copy /Y dia_logo.ico "dist\DIA_MC\" >nul
-copy /Y dia_logo.png "dist\DIA_MC\" >nul
-copy /Y *.json "dist\DIA_MC\" >nul
-echo.
-echo  DONE. Executable: dist\DIA_MC\dia_mc.exe
-explorer "dist\DIA_MC"
+echo  DONE. Single executable: dist\dia_mc.exe
+echo  Just double-click dist\dia_mc.exe to run. No other files needed.
+explorer "dist"
 pause

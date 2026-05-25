@@ -405,6 +405,16 @@ def get_app_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 
+def resource_path(name):
+    # onefile(.exe)로 묶인 읽기 전용 리소스는 _MEIPASS 임시폴더에 풀린다.
+    base = getattr(sys, '_MEIPASS', None)
+    if base:
+        bundled = os.path.join(base, name)
+        if os.path.exists(bundled):
+            return bundled
+    return os.path.join(get_app_dir(), name)
+
+
 def get_last_settings_path():
     return os.path.join(get_app_dir(), 'last_settings.json')
 
@@ -514,7 +524,7 @@ class MacroApp(tk.Tk):
 
     
     def _set_window_icon(self):
-        icon_path = os.path.join(get_app_dir(), 'dia_logo.png')
+        icon_path = resource_path('dia_logo.png')
         if not os.path.exists(icon_path):
             return None
         
