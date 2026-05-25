@@ -43,6 +43,7 @@ exe = EXE(
     upx=False,
     console=False,
     disable_windowed_traceback=False,
+    uac_admin=True,
     icon='dia_logo.ico',
 )
 coll = COLLECT(

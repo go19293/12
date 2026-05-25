@@ -17,6 +17,11 @@ except Exception:
     gamepad_input = None
     GAMEPAD_SUPPORTED = False
 
+try:
+    import win_input
+except Exception:
+    win_input = None
+
 
 class GamepadButton:
     """게임패드 버튼을 키보드/마우스와 동일한 핫키 체계로 흘려보내기 위한 합성 키 객체."""
@@ -514,6 +519,9 @@ class MacroApp(tk.Tk):
         self._suppressed_trigger_inputs = { }
         self.kb_controller = keyboard.Controller()
         self.mouse_controller = mouse.Controller()
+        if win_input is not None:
+            self.kb_controller = win_input.GameKeyboard(self.kb_controller)
+            self.mouse_controller = win_input.GameMouse(self.mouse_controller)
         self._last_settings_path = get_last_settings_path()
         self._load_last_settings_silent()
         self._build_ui()
