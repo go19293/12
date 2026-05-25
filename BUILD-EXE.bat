@@ -21,15 +21,16 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
-echo [3/3] Building single exe...
+echo [3/3] Building exe (folder mode)...
 python -m PyInstaller --noconfirm dia_mc.spec
 if errorlevel 1 (
     echo  [ERROR] Build failed.
     pause
     exit /b 1
 )
+copy /Y *.json "dist\DIA_MC\" >nul 2>nul
 echo.
-echo  DONE. Single executable: dist\dia_mc.exe
-echo  Just double-click dist\dia_mc.exe to run. No other files needed.
-explorer "dist"
+echo  DONE. Run: dist\DIA_MC\dia_mc.exe
+echo  Move the whole DIA_MC folder together; run dia_mc.exe inside it.
+explorer "dist\DIA_MC"
 pause
