@@ -1,50 +1,92 @@
-"""가상 게임패드 출력 (Windows, ViGEmBus + vgamepad).
+"""가상 게임패드 출력 (Windows, ViGEmBus + 번들된 ViGEmClient.dll).
 
-매크로가 '게임패드 버튼'을 눌러주려면 가상 Xbox360 컨트롤러를 만들어 그 버튼을
-눌러야 한다. vgamepad 라이브러리(내부적으로 ViGEmClient.dll)를 사용하며,
-실제 동작에는 사용자 PC에 ViGEmBus 드라이버가 설치돼 있어야 한다.
+vgamepad 라이브러리(설치 시 드라이버 MSI 를 실행해 CI/빌드를 멈추게 함) 대신,
+ViGEmClient.dll 을 저장소에 동봉하고 ctypes 로 직접 호출한다. pip 설치가 전혀
+필요 없으므로 빌드가 안정적이다.
 
-vgamepad 가 없거나 드라이버 미설치/비-Windows 면 available=False 가 되고,
-press/release/tap 은 조용히 False 를 돌려준다(앱은 안내 문구만 표시).
+실제 가상 컨트롤러 생성에는 사용자 PC 에 ViGEmBus 드라이버가 설치돼 있어야 한다
+(없으면 connect 단계에서 BUS_NOT_FOUND 가 나고 supported=True 지만 press 는 False).
 
 이름 규약은 gamepad_input 과 동일한 'Gamepad.XXX' 를 받는다.
 """
 
+import os
 import sys
 import threading
 import time
 
 _IS_WIN = sys.platform == 'win32'
-
-try:
-    import vgamepad as _vg
-except Exception:
-    _vg = None
-
 _PREFIX = 'Gamepad.'
 
-_BUTTON_MAP = {}
-if _vg is not None:
-    _B = _vg.XUSB_BUTTON
-    _BUTTON_MAP = {
-        'A': _B.XUSB_GAMEPAD_A,
-        'B': _B.XUSB_GAMEPAD_B,
-        'X': _B.XUSB_GAMEPAD_X,
-        'Y': _B.XUSB_GAMEPAD_Y,
-        'LB': _B.XUSB_GAMEPAD_LEFT_SHOULDER,
-        'RB': _B.XUSB_GAMEPAD_RIGHT_SHOULDER,
-        'Back': _B.XUSB_GAMEPAD_BACK,
-        'Start': _B.XUSB_GAMEPAD_START,
-        'LStick': _B.XUSB_GAMEPAD_LEFT_THUMB,
-        'RStick': _B.XUSB_GAMEPAD_RIGHT_THUMB,
-        'DPadUp': _B.XUSB_GAMEPAD_DPAD_UP,
-        'DPadDown': _B.XUSB_GAMEPAD_DPAD_DOWN,
-        'DPadLeft': _B.XUSB_GAMEPAD_DPAD_LEFT,
-        'DPadRight': _B.XUSB_GAMEPAD_DPAD_RIGHT,
-        'Guide': _B.XUSB_GAMEPAD_GUIDE,
-    }
+_VIGEM_ERROR_NONE = 0x20000000
 
+# XUSB_BUTTON 비트 (XInput wButtons 와 동일)
+_BUTTON_MAP = {
+    'DPadUp': 0x0001, 'DPadDown': 0x0002, 'DPadLeft': 0x0004, 'DPadRight': 0x0008,
+    'Start': 0x0010, 'Back': 0x0020, 'LStick': 0x0040, 'RStick': 0x0080,
+    'LB': 0x0100, 'RB': 0x0200, 'Guide': 0x0400,
+    'A': 0x1000, 'B': 0x2000, 'X': 0x4000, 'Y': 0x8000,
+}
 _STICK_MAX = 32767
+
+_dll = None
+_XUSB_REPORT = None
+
+if _IS_WIN:
+    import ctypes
+
+    class _XUSB_REPORT_STRUCT(ctypes.Structure):
+        _fields_ = [
+            ('wButtons', ctypes.c_ushort),
+            ('bLeftTrigger', ctypes.c_ubyte),
+            ('bRightTrigger', ctypes.c_ubyte),
+            ('sThumbLX', ctypes.c_short),
+            ('sThumbLY', ctypes.c_short),
+            ('sThumbRX', ctypes.c_short),
+            ('sThumbRY', ctypes.c_short),
+        ]
+
+    _XUSB_REPORT = _XUSB_REPORT_STRUCT
+
+    def _find_dll():
+        names = ('ViGEmClient.dll',)
+        bases = []
+        meipass = getattr(sys, '_MEIPASS', None)
+        if meipass:
+            bases.append(os.path.join(meipass, 'vigem'))
+            bases.append(meipass)
+        here = os.path.dirname(os.path.abspath(__file__))
+        bases.append(os.path.join(here, 'vigem'))
+        bases.append(here)
+        for base in bases:
+            for n in names:
+                p = os.path.join(base, n)
+                if os.path.exists(p):
+                    return p
+        return None
+
+    try:
+        _dll_path = _find_dll()
+        if _dll_path:
+            _dll = ctypes.WinDLL(_dll_path)
+            _dll.vigem_alloc.restype = ctypes.c_void_p
+            _dll.vigem_alloc.argtypes = []
+            _dll.vigem_connect.restype = ctypes.c_int
+            _dll.vigem_connect.argtypes = [ctypes.c_void_p]
+            _dll.vigem_disconnect.argtypes = [ctypes.c_void_p]
+            _dll.vigem_free.argtypes = [ctypes.c_void_p]
+            _dll.vigem_target_x360_alloc.restype = ctypes.c_void_p
+            _dll.vigem_target_x360_alloc.argtypes = []
+            _dll.vigem_target_free.argtypes = [ctypes.c_void_p]
+            _dll.vigem_target_add.restype = ctypes.c_int
+            _dll.vigem_target_add.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+            _dll.vigem_target_remove.restype = ctypes.c_int
+            _dll.vigem_target_remove.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+            _dll.vigem_target_x360_update.restype = ctypes.c_int
+            _dll.vigem_target_x360_update.argtypes = [
+                ctypes.c_void_p, ctypes.c_void_p, _XUSB_REPORT_STRUCT]
+    except Exception:
+        _dll = None
 
 
 def is_gamepad_output(name):
@@ -52,41 +94,58 @@ def is_gamepad_output(name):
 
 
 class VirtualPad:
-    """가상 Xbox360 패드. 첫 출력 시점에 지연 생성한다."""
+    """ViGEmClient.dll 로 가상 Xbox360 패드를 만든다. 첫 출력 시 지연 연결."""
 
     def __init__(self):
-        self._gp = None
+        self._client = None
+        self._target = None
         self._lock = threading.Lock()
         self._active = set()
         self.last_error = None
-        self.supported = _vg is not None and _IS_WIN
+        self.supported = _IS_WIN and _dll is not None
 
     def _ensure(self):
-        if self._gp is not None:
+        if self._target is not None:
             return True
         if not self.supported:
+            self.last_error = 'ViGEmClient.dll 없음'
             return False
         try:
-            self._gp = _vg.VX360Gamepad()
+            self._client = _dll.vigem_alloc()
+            if not self._client:
+                self.last_error = 'vigem_alloc 실패'
+                return False
+            r = _dll.vigem_connect(self._client)
+            if r != _VIGEM_ERROR_NONE:
+                self.last_error = 'vigem_connect 0x%08X (드라이버 미설치?)' % (r & 0xFFFFFFFF)
+                return False
+            self._target = _dll.vigem_target_x360_alloc()
+            if not self._target:
+                self.last_error = 'x360_alloc 실패'
+                return False
+            r = _dll.vigem_target_add(self._client, self._target)
+            if r != _VIGEM_ERROR_NONE:
+                self.last_error = 'target_add 0x%08X' % (r & 0xFFFFFFFF)
+                self._target = None
+                return False
             return True
         except Exception as exc:
-            self.last_error = exc
-            self._gp = None
+            self.last_error = str(exc)
             return False
 
     def _apply_locked(self):
-        gp = self._gp
-        gp.reset()
+        buttons = 0
+        lt = rt = 0
         lx = ly = rx = ry = 0
         for name in self._active:
             short = name[len(_PREFIX):] if name.startswith(_PREFIX) else name
-            btn = _BUTTON_MAP.get(short)
-            if btn is not None:
-                gp.press_button(button=btn)
+            bit = _BUTTON_MAP.get(short)
+            if bit is not None:
+                buttons |= bit
             elif short == 'LT':
-                gp.left_trigger(value=255)
+                lt = 255
             elif short == 'RT':
-                gp.right_trigger(value=255)
+                rt = 255
             elif short == 'LStickLeft':
                 lx = -_STICK_MAX
             elif short == 'LStickRight':
@@ -103,9 +162,9 @@ class VirtualPad:
                 ry = _STICK_MAX
             elif short == 'RStickDown':
                 ry = -_STICK_MAX
-        gp.left_joystick(x_value=lx, y_value=ly)
-        gp.right_joystick(x_value=rx, y_value=ry)
-        gp.update()
+        report = _XUSB_REPORT(buttons, lt, rt, lx, ly, rx, ry)
+        r = _dll.vigem_target_x360_update(self._client, self._target, report)
+        return r == _VIGEM_ERROR_NONE
 
     def press(self, name):
         with self._lock:
@@ -113,22 +172,20 @@ class VirtualPad:
                 return False
             self._active.add(name)
             try:
-                self._apply_locked()
-                return True
+                return self._apply_locked()
             except Exception as exc:
-                self.last_error = exc
+                self.last_error = str(exc)
                 return False
 
     def release(self, name):
         with self._lock:
-            if self._gp is None:
+            if self._target is None:
                 return False
             self._active.discard(name)
             try:
-                self._apply_locked()
-                return True
+                return self._apply_locked()
             except Exception as exc:
-                self.last_error = exc
+                self.last_error = str(exc)
                 return False
 
     def tap(self, name, hold=0.04):
@@ -139,7 +196,7 @@ class VirtualPad:
 
     def release_all(self):
         with self._lock:
-            if self._gp is None:
+            if self._target is None:
                 return
             self._active.clear()
             try:

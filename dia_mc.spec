@@ -8,26 +8,19 @@
 
 block_cipher = None
 
-# vgamepad(가상 게임패드) 의 ViGEmClient.dll / 설치파일 등 데이터·바이너리를 모은다.
-_vg_datas, _vg_binaries, _vg_hidden = [], [], []
-try:
-    from PyInstaller.utils.hooks import collect_all
-    _vg_datas, _vg_binaries, _vg_hidden = collect_all('vgamepad')
-except Exception:
-    pass
-
 a = Analysis(
     ['dia_mc.py'],
     pathex=[],
-    binaries=_vg_binaries,
+    binaries=[],
     datas=[
         ('dia_logo.png', '.'),
         ('dia_logo.ico', '.'),
-    ] + _vg_datas,
+        ('vigem/ViGEmClient.dll', 'vigem'),
+    ],
     hiddenimports=[
         'pynput.keyboard._win32',
         'pynput.mouse._win32',
-    ] + _vg_hidden,
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

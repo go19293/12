@@ -1,2 +1,1 @@
 pynput>=1.7
-vgamepad>=0.1.0
