@@ -22,6 +22,11 @@ try:
 except Exception:
     win_input = None
 
+try:
+    import virtual_pad
+except Exception:
+    virtual_pad = None
+
 
 class GamepadButton:
     """게임패드 버튼을 키보드/마우스와 동일한 핫키 체계로 흘려보내기 위한 합성 키 객체."""
@@ -500,6 +505,8 @@ class MacroApp(tk.Tk):
         self._worker_threads = []
         self._held_keys = []
         self._held_mouse = []
+        self._held_pad = []
+        self.virtual_pad = virtual_pad.VirtualPad() if virtual_pad is not None else None
         self._run_lock = threading.Lock()
         self._input_block_lock = threading.Lock()
         self._input_block_count = 0
@@ -3360,6 +3367,10 @@ class MacroApp(tk.Tk):
             return None
         if a['type'] == 'key':
             ks = a.get('key', '')
+            if ks.startswith('Gamepad.'):
+                if self._pad_press(ks):
+                    self._held_pad.append(ks)
+                return None
             kobj = str_to_key(ks)
             if kobj is None:
                 return None
@@ -3394,9 +3405,31 @@ class MacroApp(tk.Tk):
             except Exception:
                 continue
         self._held_mouse = []
+        for name in self._held_pad:
+            try:
+                self.virtual_pad.release(name)
+            except Exception:
+                continue
+        self._held_pad = []
         return None
 
-    
+
+    def _pad_press(self, ks):
+        vp = self.virtual_pad
+        if vp is None or not vp.supported:
+            self.status_var.set('게임패드 출력 불가: ViGEmBus 드라이버 설치가 필요합니다.')
+            return False
+        return vp.press(ks)
+
+
+    def _pad_tap(self, ks):
+        vp = self.virtual_pad
+        if vp is None or not vp.supported:
+            self.status_var.set('게임패드 출력 불가: ViGEmBus 드라이버 설치가 필요합니다.')
+            return False
+        return vp.tap(ks)
+
+
     def _click_worker(self = None, a = None):
         try:
             interval = parse_interval(str(a.get('interval', 0.0001)))
@@ -3416,10 +3449,13 @@ class MacroApp(tk.Tk):
             try:
                 if a['type'] == 'key':
                     ks = a.get('key', '')
-                    kobj = str_to_key(ks)
-                    if kobj is not None:
-                        self.kb_controller.press(kobj)
-                        self.kb_controller.release(kobj)
+                    if ks.startswith('Gamepad.'):
+                        self._pad_tap(ks)
+                    else:
+                        kobj = str_to_key(ks)
+                        if kobj is not None:
+                            self.kb_controller.press(kobj)
+                            self.kb_controller.release(kobj)
                 else:
                     (button_type, button) = self._action_mouse_storage(a)
                     bobj = mouse_button_obj_from_storage(button_type, button)
@@ -3709,11 +3745,15 @@ class MacroApp(tk.Tk):
             trigger_type = a.get('trigger_type', 'key')
             if trigger_type == 'key':
                 ks = a.get('trigger_key', '')
-                kobj = str_to_key(ks)
-                if kobj is not None:
+                if ks.startswith('Gamepad.'):
                     self._suppress_next_trigger_input('key', ks)
-                    self.kb_controller.press(kobj)
-                    self.kb_controller.release(kobj)
+                    self._pad_tap(ks)
+                else:
+                    kobj = str_to_key(ks)
+                    if kobj is not None:
+                        self._suppress_next_trigger_input('key', ks)
+                        self.kb_controller.press(kobj)
+                        self.kb_controller.release(kobj)
             else:
                 (button_type, button) = self._trigger_action_mouse_storage(a)
                 bobj = mouse_button_obj_from_storage(button_type, button)
@@ -3737,10 +3777,13 @@ class MacroApp(tk.Tk):
             target_type = step.get('target_type', 'key')
             if target_type == 'key':
                 ks = step.get('target_key', '')
-                kobj = str_to_key(ks)
-                if kobj is not None:
-                    self.kb_controller.press(kobj)
-                    self.kb_controller.release(kobj)
+                if ks.startswith('Gamepad.'):
+                    self._pad_tap(ks)
+                else:
+                    kobj = str_to_key(ks)
+                    if kobj is not None:
+                        self.kb_controller.press(kobj)
+                        self.kb_controller.release(kobj)
             else:
                 (button_type, button) = self._trigger_step_mouse_storage(step)
                 bobj = mouse_button_obj_from_storage(button_type, button)
