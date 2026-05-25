@@ -3414,20 +3414,27 @@ class MacroApp(tk.Tk):
         return None
 
 
-    def _pad_press(self, ks):
+    def _pad_output(self, ks, tap):
         vp = self.virtual_pad
         if vp is None or not vp.supported:
-            self.status_var.set('게임패드 출력 불가: ViGEmBus 드라이버 설치가 필요합니다.')
+            self.status_var.set('게임패드 출력 기능이 이 빌드에 없습니다. 최신 빌드로 업데이트하세요.')
             return False
-        return vp.press(ks)
+        ok = vp.tap(ks) if tap else vp.press(ks)
+        if not ok:
+            err = getattr(vp, 'last_error', None)
+            msg = '게임패드 출력 실패: ViGEmBus 드라이버 인식 안됨(설치 후 재부팅 필요).'
+            if err:
+                msg += ' [' + str(err) + ']'
+            self.status_var.set(msg)
+        return ok
+
+
+    def _pad_press(self, ks):
+        return self._pad_output(ks, False)
 
 
     def _pad_tap(self, ks):
-        vp = self.virtual_pad
-        if vp is None or not vp.supported:
-            self.status_var.set('게임패드 출력 불가: ViGEmBus 드라이버 설치가 필요합니다.')
-            return False
-        return vp.tap(ks)
+        return self._pad_output(ks, True)
 
 
     def _click_worker(self = None, a = None):

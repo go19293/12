@@ -40,10 +40,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pynput pyinstaller
 
-      - name: Install vgamepad (wheel only, no driver install)
+      - name: Install vgamepad (skip driver install on runner)
         continue-on-error: true
         timeout-minutes: 5
-        run: "python -m pip install --only-binary=:all: vgamepad"
+        env:
+          VGAMEPAD_SKIP_VIGEMBUS_INSTALL: 'true'
+        run: python -m pip install vgamepad
 
       - name: Report vgamepad availability
         continue-on-error: true
